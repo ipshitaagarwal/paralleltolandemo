@@ -136,7 +136,6 @@
 
         <div class="summary-cards three-cards">
           <div class="summary-card parallel">
-            <div class="provider-badge new-badge">🚀 PROPOSED</div>
             <div class="card-value">{{ results.summary.parallelWins }}</div>
             <div class="card-label">Parallel Wins</div>
             <div class="card-bar">
@@ -145,7 +144,6 @@
           </div>
 
           <div class="summary-card exa">
-            <div class="provider-badge current-badge">📍 CURRENT</div>
             <div class="card-value">{{ results.summary.exaWins }}</div>
             <div class="card-label">Exa Wins</div>
             <div class="card-bar">
@@ -198,8 +196,8 @@
               <tr>
                 <th class="col-num">#</th>
                 <th class="col-query">Query</th>
-                <th class="col-score">⚡ Parallel (Proposed)</th>
-                <th class="col-score">✨ Exa (Current)</th>
+                <th class="col-score">⚡ Parallel</th>
+                <th class="col-score">✨ Exa</th>
                 <th class="col-winner">Winner</th>
               </tr>
             </thead>
@@ -241,14 +239,14 @@
                       <div class="reasoning-grid two-col">
                         <div class="reasoning-card parallel">
                           <div class="reasoning-header">
-                            <span class="api-name">⚡ Parallel (Proposed)</span>
+                            <span class="api-name">⚡ Parallel</span>
                             <span class="metrics-detail">{{ r.parallel.scores.latency || 0 }}ms · ${{ (r.parallel.scores.cost || 0).toFixed(4) }}</span>
                           </div>
                           <p class="reasoning-text">{{ r.parallel.scores.reasoning || 'No reasoning available' }}</p>
                         </div>
                         <div class="reasoning-card exa">
                           <div class="reasoning-header">
-                            <span class="api-name">✨ Exa (Current)</span>
+                            <span class="api-name">✨ Exa</span>
                             <span class="metrics-detail">{{ r.exa.scores.latency || 0 }}ms · ${{ (r.exa.scores.cost || 0).toFixed(4) }}</span>
                           </div>
                           <p class="reasoning-text">{{ r.exa.scores.reasoning || 'No reasoning available' }}</p>

@@ -81,7 +81,6 @@
 
         <div class="scores-grid two-col">
           <div class="score-card parallel" :class="{ winner: judgment.winner === 'parallel' }">
-            <div class="provider-tag new-tag">🚀 PROPOSED</div>
             <div class="score-header">
               <span class="api-icon">⚡</span>
               <span class="api-name">Parallel</span>
@@ -118,7 +117,6 @@
           </div>
 
           <div class="score-card exa" :class="{ winner: judgment.winner === 'exa' }">
-            <div class="provider-tag current-tag">📍 CURRENT</div>
             <div class="score-header">
               <span class="api-icon">✨</span>
               <span class="api-name">Exa</span>
@@ -161,7 +159,6 @@
         <!-- Parallel Results Column -->
         <div class="result-column">
           <div class="column-header parallel">
-            <div class="provider-label new-label">🚀 PROPOSED</div>
             <div class="api-info">
               <span class="api-badge">⚡ PARALLEL</span>
               <span class="result-count">{{ results.parallel.results.length }} results</span>
@@ -192,7 +189,6 @@
         <!-- Exa Results Column -->
         <div class="result-column">
           <div class="column-header exa">
-            <div class="provider-label current-label">📍 CURRENT</div>
             <div class="api-info">
               <span class="api-badge">✨ EXA</span>
               <span class="result-count">{{ results.exa.results.length }} results</span>
@@ -229,18 +225,16 @@
       <p>See how Parallel could improve Tolan's ability to help users with real-world questions.</p>
       <div class="api-cards two-col">
         <div class="api-card parallel">
-          <div class="card-tag new-card">🚀 PROPOSED</div>
           <span class="card-icon">⚡</span>
           <h4>Parallel API</h4>
           <code>api.parallel.ai</code>
           <p>Semantic search optimized for AI assistants with objective-based queries</p>
         </div>
         <div class="api-card exa">
-          <div class="card-tag current-card">📍 CURRENT</div>
           <span class="card-icon">✨</span>
           <h4>Exa API</h4>
           <code>api.exa.ai</code>
-          <p>Neural search engine currently powering Tolan's web lookups</p>
+          <p>Neural search engine for web lookups</p>
         </div>
       </div>
       <div class="use-case-examples">
