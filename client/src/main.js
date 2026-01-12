@@ -7,6 +7,7 @@ import Settings from './views/Settings.vue'
 
 const routes = [
   { path: '/', component: SingleQuery },
+  { path: '/q/:id', component: SingleQuery, props: true },
   { path: '/suite', component: TestSuite },
   { path: '/suite/:id', component: TestSuite, props: true },
   { path: '/settings', component: Settings }

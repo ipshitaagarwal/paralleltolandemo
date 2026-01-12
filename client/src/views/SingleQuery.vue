@@ -1,15 +1,34 @@
 <template>
   <div class="single-query">
+    <!-- Loading State for Shared Results -->
+    <div v-if="loadingShared" class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>Loading shared results...</p>
+    </div>
+
+    <template v-else>
+    <!-- Shared View Banner -->
+    <div v-if="isSharedView" class="shared-banner">
+      <div class="shared-info">
+        <span class="share-icon">🔗</span>
+        <span>Shared Results</span>
+        <span class="share-date" v-if="sharedData?.createdAt">{{ formatDate(sharedData.createdAt) }}</span>
+      </div>
+      <router-link to="/" class="btn-new-query">
+        Run Your Own Query
+      </router-link>
+    </div>
+
     <!-- Tolan Context Banner -->
-    <div class="tolan-context">
+    <div v-if="!isSharedView" class="tolan-context">
       <div class="context-icon">🛸</div>
       <div class="context-text">
         <strong>Scenario:</strong> A Tolan user asks their alien friend a question. Compare how Parallel vs Exa would help Tolan find the answer.
       </div>
     </div>
 
-    <!-- Search Input -->
-    <div class="search-section">
+    <!-- Search Input (hide in shared view) -->
+    <div v-if="!isSharedView" class="search-section">
       <div class="search-box">
         <div class="search-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -31,8 +50,8 @@
       </div>
     </div>
 
-    <!-- Quick Example Queries -->
-    <div class="example-queries">
+    <!-- Quick Example Queries (hide in shared view) -->
+    <div v-if="!isSharedView" class="example-queries">
       <span class="example-label">Try these Tolan-style queries:</span>
       <button v-for="example in exampleQueries" :key="example" @click="setQuery(example)" class="example-btn">
         {{ example }}
@@ -53,11 +72,24 @@
           <span class="query-label">Query</span>
           <h2>"{{ searchedQuery }}"</h2>
         </div>
-        <button @click="runJudge" :disabled="judging" class="judge-btn">
-          <span v-if="judging" class="spinner small"></span>
-          <span v-else class="judge-icon">🧠</span>
-          {{ judging ? 'Analyzing...' : judgment ? 'Re-Judge with GPT-4o' : 'Judge with GPT-4o' }}
-        </button>
+        <div class="header-actions">
+          <button @click="runJudge" :disabled="judging" class="judge-btn">
+            <span v-if="judging" class="spinner small"></span>
+            <span v-else class="judge-icon">🧠</span>
+            {{ judging ? 'Analyzing...' : judgment ? 'Re-Judge with GPT-4o' : 'Judge with GPT-4o' }}
+          </button>
+          <button v-if="!shareUrl && !isSharedView" @click="shareResults" :disabled="sharing" class="share-btn">
+            <span v-if="sharing" class="spinner small"></span>
+            <span v-else>🔗</span>
+            {{ sharing ? 'Saving...' : 'Share' }}
+          </button>
+          <div v-if="shareUrl" class="share-link-container">
+            <input type="text" :value="shareUrl" readonly class="share-link-input" ref="shareLinkInput" />
+            <button @click="copyShareLink" class="btn-copy" :class="{ copied }">
+              {{ copied ? '✓' : 'Copy' }}
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Judgment Panel -->
@@ -247,13 +279,22 @@
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>
 
 <script>
 export default {
+  props: {
+    id: {
+      type: String,
+      default: null
+    }
+  },
   data() {
     return {
+      loadingShared: false,
+      sharedData: null,
       query: '',
       searchedQuery: '',
       results: null,
@@ -261,6 +302,9 @@ export default {
       loading: false,
       judging: false,
       error: null,
+      sharing: false,
+      shareUrl: null,
+      copied: false,
       exampleQueries: [
         "I can't stop thinking about my ex, what should I do?",
         "Why do I feel so anxious all the time?",
@@ -275,8 +319,44 @@ export default {
       ]
     }
   },
-  computed: {},
+  async mounted() {
+    if (this.id) {
+      await this.loadSharedResults()
+    }
+  },
+  computed: {
+    isSharedView() {
+      return !!this.id
+    }
+  },
   methods: {
+    async loadSharedResults() {
+      if (!this.id) return
+
+      this.loadingShared = true
+      this.error = null
+
+      try {
+        const res = await fetch(`/api/query/results/${this.id}`)
+        
+        if (!res.ok) {
+          if (res.status === 404) {
+            throw new Error('Shared results not found. The link may have expired or be invalid.')
+          }
+          throw new Error('Failed to load shared results')
+        }
+
+        const data = await res.json()
+        this.sharedData = data
+        this.searchedQuery = data.query
+        this.results = data.results
+        this.judgment = data.judgment
+      } catch (err) {
+        this.error = err.message
+      } finally {
+        this.loadingShared = false
+      }
+    },
     setQuery(example) {
       this.query = example
       this.runSearch()
@@ -288,6 +368,7 @@ export default {
       this.error = null
       this.results = null
       this.judgment = null
+      this.shareUrl = null
       this.searchedQuery = this.query
 
       try {
@@ -337,12 +418,133 @@ export default {
     formatDate(date) {
       if (!date) return ''
       return new Date(date).toLocaleDateString()
+    },
+    async shareResults() {
+      if (!this.results) return
+
+      this.sharing = true
+      this.error = null
+
+      try {
+        const res = await fetch('/api/query/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: this.searchedQuery,
+            results: this.results,
+            judgment: this.judgment
+          })
+        })
+
+        if (!res.ok) throw new Error('Failed to save results')
+
+        const data = await res.json()
+        this.shareUrl = window.location.origin + data.url
+      } catch (err) {
+        this.error = err.message
+      } finally {
+        this.sharing = false
+      }
+    },
+    async copyShareLink() {
+      if (!this.shareUrl) return
+
+      try {
+        await navigator.clipboard.writeText(this.shareUrl)
+        this.copied = true
+        setTimeout(() => {
+          this.copied = false
+        }, 2000)
+      } catch (err) {
+        this.$refs.shareLinkInput.select()
+        document.execCommand('copy')
+        this.copied = true
+        setTimeout(() => {
+          this.copied = false
+        }, 2000)
+      }
     }
   }
 }
 </script>
 
 <style scoped>
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(163, 230, 53, 0.2);
+  border-top-color: #a3e635;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+.loading-state p {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Shared Banner */
+.shared-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.05));
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.shared-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.shared-info .share-icon {
+  font-size: 18px;
+}
+
+.share-date {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.btn-new-query {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #a3e635, #22d3ee);
+  border: none;
+  border-radius: 10px;
+  color: #1a1a2e;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-new-query:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(163, 230, 53, 0.4);
+}
+
 /* Tolan Context Banner */
 .tolan-context {
   display: flex;
@@ -561,6 +763,78 @@ export default {
 
 .judge-icon {
   font-size: 16px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.share-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  background: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.share-btn:hover:not(:disabled) {
+  background: rgba(139, 92, 246, 0.3);
+  transform: translateY(-1px);
+}
+
+.share-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.share-link-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.share-link-input {
+  width: 240px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-family: 'SF Mono', Monaco, monospace;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.8);
+  outline: none;
+}
+
+.btn-copy {
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #a78bfa, #60a5fa);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-copy:hover {
+  transform: translateY(-1px);
+}
+
+.btn-copy.copied {
+  background: linear-gradient(135deg, #34d399, #10b981);
 }
 
 /* Judgment Panel */

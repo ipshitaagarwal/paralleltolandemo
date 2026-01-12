@@ -179,6 +179,59 @@ app.post('/api/suite/run', async (req, res) => {
   }
 });
 
+// Save single query results for sharing
+app.post('/api/query/save', async (req, res) => {
+  try {
+    const { query, results, judgment } = req.body;
+
+    if (!query || !results) {
+      return res.status(400).json({ error: 'Query and results are required' });
+    }
+
+    // Generate a unique ID (8 chars for readability)
+    const id = 'q-' + crypto.randomBytes(4).toString('hex');
+    
+    const data = {
+      id,
+      type: 'single-query',
+      createdAt: new Date().toISOString(),
+      query,
+      results,
+      judgment: judgment || null
+    };
+
+    // Save to file
+    const filePath = path.join(RESULTS_DIR, `${id}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+
+    res.json({ id, url: `/q/${id}` });
+  } catch (err) {
+    console.error('Save query results error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get shared single query results
+app.get('/api/query/results/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Sanitize ID to prevent path traversal
+    const sanitizedId = id.replace(/[^a-zA-Z0-9-]/g, '');
+    const filePath = path.join(RESULTS_DIR, `${sanitizedId}.json`);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Results not found' });
+    }
+
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    res.json(data);
+  } catch (err) {
+    console.error('Get query results error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Save test suite results for sharing
 app.post('/api/suite/save', async (req, res) => {
   try {
