@@ -31,13 +31,21 @@ async function judgeResults(query, parallelResults, exaResults, openaiResults) {
     }
   };
 
-  // Ask LLM to judge accuracy only
-  const prompt = `You are evaluating search result ACCURACY for the query: "${query}"
+  // Ask LLM to judge accuracy - context: Tolan AI companion app
+  const prompt = `You are evaluating search result ACCURACY for this query from a Tolan user (Tolan is an AI companion app - "Alien Best Friend" - where users chat with an AI about personal matters, advice, emotional support, etc.):
+
+Query: "${query}"
+
+Consider that Tolan needs search results that:
+- Are emotionally appropriate and supportive for personal queries
+- Provide actionable, helpful advice
+- Come from trustworthy, authoritative sources
+- Are relevant to personal/life situations (not just technical accuracy)
 
 Rate each API's results on ACCURACY (1-10 scale):
-- How relevant are the results to the query intent?
-- How authoritative and useful are the sources?
-- How comprehensive is the coverage?
+- How relevant are the results to what the user actually needs?
+- How helpful would these results be for an AI companion to give good advice?
+- How appropriate and trustworthy are the sources?
 
 PARALLEL API Results (${metrics.parallel.resultCount} results, ${metrics.parallel.latency}ms, $${metrics.parallel.cost.toFixed(4)}):
 ${JSON.stringify(parallelResults.results?.slice(0, 5) || [], null, 2)}
@@ -167,30 +175,46 @@ async function generateTestSuite(count = 10, topic = null) {
   let prompt;
 
   if (topic) {
-    prompt = `Generate ${count} realistic search queries that someone might use when searching for information about: "${topic}"
+    prompt = `Generate ${count} realistic search queries that a user of Tolan (an AI companion app - "Alien Best Friend") might ask when they want information about: "${topic}"
 
-The queries should be diverse and represent different aspects or questions related to this topic.
+Tolan users typically talk to their AI companion about personal matters, seeking advice, information, or just conversation. The queries should feel like natural questions someone would ask their AI friend.
+
 Include variations like:
-- Specific lookups (e.g., "React useState hook documentation")
-- How-to queries (e.g., "how to implement authentication in Next.js")
-- Comparison queries (e.g., "Redux vs Zustand state management")
-- Troubleshooting queries (e.g., "fix CORS error in Express")
-- Best practices (e.g., "best practices for API design")
+- Emotional support queries (e.g., "how to deal with feeling anxious")
+- Life advice (e.g., "should I change careers at 30")
+- Self-improvement (e.g., "ways to build confidence")
+- Curiosity questions (e.g., "why do people ghost")
+- Practical help (e.g., "how to have difficult conversations")
 
-Make them realistic - actual queries a developer/user would type.
+Make them conversational and personal - how someone would actually talk to an AI companion.
 
 Return ONLY a valid JSON array of query strings (no markdown, no code blocks):
 ["query 1", "query 2", ...]`;
   } else {
-    prompt = `Generate ${count} diverse search queries for testing search APIs.
+    // Default: Generate Tolan-relevant queries for AI companion use case
+    prompt = `Generate ${count} questions that real users of Tolan (an AI companion app called "Alien Best Friend") would actually ask.
 
-Make queries realistic - things a user might actually search for.
-Include a mix of:
-- Current events / news
-- Technical/research topics
-- Company/product information
-- How-to / instructional
-- Factual questions
+Tolan users are typically young adults (18-30) who use the app to talk through personal stuff with an AI friend who "gets" them. These are NOT polished search queries - they're how someone actually talks to a friend.
+
+Generate questions that sound like:
+- "I can't stop thinking about my ex, what should I do?"
+- "Why do I feel so empty even when good things happen?"
+- "I had a fight with my mom and now she won't talk to me"
+- "Is it weird that I don't have a lot of friends?"
+- "How do I tell my boyfriend I need more space?"
+- "I'm so burnt out from work but I can't afford to quit"
+- "What do you do when you feel like you're falling behind in life?"
+
+Topics users care about:
+- Relationships (romantic, family, friendships)
+- Mental health and emotions
+- Career/school stress
+- Self-doubt and insecurity
+- Loneliness and connection
+- Big life decisions
+- Feeling stuck or lost
+
+Make them sound REAL and personal - raw, not polished. First person, conversational.
 
 Return ONLY a valid JSON array of query strings (no markdown, no code blocks):
 ["query 1", "query 2", ...]`;

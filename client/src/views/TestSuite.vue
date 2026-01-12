@@ -10,10 +10,10 @@
       <!-- Header -->
       <div class="suite-header">
         <div class="header-info">
-          <h2>{{ isSharedView ? 'Shared Test Results' : 'Test Suite Runner' }}</h2>
-          <p>{{ isSharedView ? 'View test suite comparison results' : 'Generate AI-powered test queries and compare all three APIs at scale' }}</p>
+          <h2>{{ isSharedView ? 'Shared Test Results' : '🛸 Tolan Search Test Suite' }}</h2>
+          <p>{{ isSharedView ? 'View test suite comparison results' : 'Run Tolan-relevant queries to compare Parallel vs Exa at scale' }}</p>
         </div>
-        <router-link v-if="isSharedView" to="/suite" class="btn-new-suite">
+        <router-link v-if="isSharedView" to="/suite" class="btn-new-suite tolan-btn">
           <span>🚀</span> Run Your Own Suite
         </router-link>
       </div>
@@ -26,7 +26,7 @@
           <input
             v-model="topic"
             type="text"
-            placeholder="e.g. developer docs lookup, AI research papers, startup news..."
+            placeholder="e.g. emotional support, life advice, friendship tips, mental health..."
             :disabled="generating || running"
             class="topic-input"
           />
@@ -116,12 +116,27 @@
           </div>
         </div>
 
-      <!-- Summary Cards -->
-      <div class="summary-panel">
-        <h3>Results Summary</h3>
+      <!-- Recommendation Banner -->
+      <div class="tolan-recommendation" v-if="results.summary.parallelWins > results.summary.exaWins">
+        <div class="rec-icon">✅</div>
+        <div class="rec-text">
+          <strong>Recommendation:</strong> Switch to Parallel! It won {{ results.summary.parallelWins }} of {{ results.summary.total }} queries ({{ Math.round(parallelWinPercent) }}%).
+        </div>
+      </div>
+      <div class="tolan-recommendation exa-better" v-else-if="results.summary.exaWins > results.summary.parallelWins">
+        <div class="rec-icon">⚠️</div>
+        <div class="rec-text">
+          <strong>Note:</strong> Exa performed better on this test suite. Consider expanding the query set.
+        </div>
+      </div>
 
-        <div class="summary-cards">
+      <!-- Summary Cards -->
+      <div class="summary-panel tolan-summary">
+        <h3>Results Summary: Parallel vs Exa</h3>
+
+        <div class="summary-cards three-cards">
           <div class="summary-card parallel">
+            <div class="provider-badge new-badge">🚀 PROPOSED</div>
             <div class="card-value">{{ results.summary.parallelWins }}</div>
             <div class="card-label">Parallel Wins</div>
             <div class="card-bar">
@@ -129,15 +144,8 @@
             </div>
           </div>
 
-          <div class="summary-card openai">
-            <div class="card-value">{{ results.summary.openaiWins }}</div>
-            <div class="card-label">OpenAI Wins</div>
-            <div class="card-bar">
-              <div class="bar-fill openai" :style="{ width: openaiWinPercent + '%' }"></div>
-            </div>
-          </div>
-
           <div class="summary-card exa">
+            <div class="provider-badge current-badge">📍 CURRENT</div>
             <div class="card-value">{{ results.summary.exaWins }}</div>
             <div class="card-label">Exa Wins</div>
             <div class="card-bar">
@@ -154,21 +162,13 @@
           </div>
         </div>
 
-        <div class="avg-scores">
+        <div class="avg-scores two-scores">
           <div class="avg-score parallel">
             <span class="avg-label">⚡ Parallel Avg</span>
             <div class="avg-values">
               <span title="Latency Score">⏱️ {{ avgScores.parallel.latency.toFixed(1) }}</span>
               <span title="Cost Score">💰 {{ avgScores.parallel.cost.toFixed(1) }}</span>
               <span title="Accuracy Score">🎯 {{ avgScores.parallel.accuracy.toFixed(1) }}</span>
-            </div>
-          </div>
-          <div class="avg-score openai">
-            <span class="avg-label">🌐 OpenAI Avg</span>
-            <div class="avg-values">
-              <span title="Latency Score">⏱️ {{ avgScores.openai.latency.toFixed(1) }}</span>
-              <span title="Cost Score">💰 {{ avgScores.openai.cost.toFixed(1) }}</span>
-              <span title="Accuracy Score">🎯 {{ avgScores.openai.accuracy.toFixed(1) }}</span>
             </div>
           </div>
           <div class="avg-score exa">
@@ -193,14 +193,13 @@
         <p class="table-hint">Click on a row to see reasoning</p>
 
         <div class="table-wrapper">
-          <table class="results-table">
+          <table class="results-table tolan-table">
             <thead>
               <tr>
                 <th class="col-num">#</th>
                 <th class="col-query">Query</th>
-                <th class="col-score">Parallel</th>
-                <th class="col-score">OpenAI</th>
-                <th class="col-score">Exa</th>
+                <th class="col-score">⚡ Parallel (Proposed)</th>
+                <th class="col-score">✨ Exa (Current)</th>
                 <th class="col-winner">Winner</th>
               </tr>
             </thead>
@@ -211,18 +210,12 @@
                   <td class="col-query">
                     <span class="query-text">{{ r.query }}</span>
                   </td>
-                  <td v-if="r.error" colspan="4" class="error-cell">{{ r.error }}</td>
+                  <td v-if="r.error" colspan="3" class="error-cell">{{ r.error }}</td>
                   <template v-else>
                     <td class="col-score">
                       <div class="score-cell parallel">
                         <span class="score-breakdown">{{ r.parallel.scores.latencyScore || 0 }} / {{ r.parallel.scores.costScore || 0 }} / {{ r.parallel.scores.accuracy || 0 }}</span>
                         <span class="score-total">{{ r.parallel.scores.total || 0 }}</span>
-                      </div>
-                    </td>
-                    <td class="col-score">
-                      <div class="score-cell openai">
-                        <span class="score-breakdown">{{ r.openai.scores.latencyScore || 0 }} / {{ r.openai.scores.costScore || 0 }} / {{ r.openai.scores.accuracy || 0 }}</span>
-                        <span class="score-total">{{ r.openai.scores.total || 0 }}</span>
                       </div>
                     </td>
                     <td class="col-score">
@@ -234,36 +227,28 @@
                     <td class="col-winner">
                       <span class="winner-badge" :class="r.winner">
                         <span v-if="r.winner === 'parallel'">⚡</span>
-                        <span v-else-if="r.winner === 'openai'">🌐</span>
                         <span v-else-if="r.winner === 'exa'">✨</span>
                         <span v-else>🤝</span>
-                        {{ r.winner }}
+                        {{ r.winner === 'parallel' ? 'Parallel' : r.winner === 'exa' ? 'Exa' : 'Tie' }}
                       </span>
                     </td>
                   </template>
                 </tr>
                 <!-- Expanded Reasoning Row -->
                 <tr v-if="expandedRow === i && !r.error" class="reasoning-row">
-                  <td colspan="6">
+                  <td colspan="5">
                     <div class="reasoning-content">
-                      <div class="reasoning-grid">
+                      <div class="reasoning-grid two-col">
                         <div class="reasoning-card parallel">
                           <div class="reasoning-header">
-                            <span class="api-name">⚡ Parallel</span>
+                            <span class="api-name">⚡ Parallel (Proposed)</span>
                             <span class="metrics-detail">{{ r.parallel.scores.latency || 0 }}ms · ${{ (r.parallel.scores.cost || 0).toFixed(4) }}</span>
                           </div>
                           <p class="reasoning-text">{{ r.parallel.scores.reasoning || 'No reasoning available' }}</p>
                         </div>
-                        <div class="reasoning-card openai">
-                          <div class="reasoning-header">
-                            <span class="api-name">🌐 OpenAI</span>
-                            <span class="metrics-detail">{{ r.openai.scores.latency || 0 }}ms · ${{ (r.openai.scores.cost || 0).toFixed(4) }}</span>
-                          </div>
-                          <p class="reasoning-text">{{ r.openai.scores.reasoning || 'No reasoning available' }}</p>
-                        </div>
                         <div class="reasoning-card exa">
                           <div class="reasoning-header">
-                            <span class="api-name">✨ Exa</span>
+                            <span class="api-name">✨ Exa (Current)</span>
                             <span class="metrics-detail">{{ r.exa.scores.latency || 0 }}ms · ${{ (r.exa.scores.cost || 0).toFixed(4) }}</span>
                           </div>
                           <p class="reasoning-text">{{ r.exa.scores.reasoning || 'No reasoning available' }}</p>
@@ -280,22 +265,33 @@
     </div>
 
       <!-- Empty State (only show if not in shared view) -->
-      <div v-else-if="queries.length === 0 && !isSharedView" class="empty-state">
-        <div class="empty-icon">📊</div>
-        <h3>No Test Suite Yet</h3>
-        <p>Generate a test suite to compare API performance across multiple queries.</p>
+      <div v-else-if="queries.length === 0 && !isSharedView" class="empty-state tolan-empty">
+        <div class="empty-icon">🛸</div>
+        <h3>Test Tolan's Search at Scale</h3>
+        <p>Generate Tolan-relevant queries to compare Parallel vs Exa across multiple scenarios.</p>
         <div class="empty-features">
           <div class="feature">
             <span class="feature-icon">🎲</span>
-            <span>AI-generated diverse queries</span>
+            <span>AI-generated Tolan queries</span>
           </div>
           <div class="feature">
             <span class="feature-icon">⚖️</span>
-            <span>Side-by-side comparison</span>
+            <span>Parallel vs Exa comparison</span>
           </div>
           <div class="feature">
             <span class="feature-icon">📈</span>
-            <span>Aggregate statistics</span>
+            <span>Clear recommendations</span>
+          </div>
+        </div>
+        <div class="tolan-query-types">
+          <h4>Query types we'll test:</h4>
+          <div class="query-type-grid">
+            <span class="query-type">💭 Emotional support</span>
+            <span class="query-type">🎯 Life advice</span>
+            <span class="query-type">📚 Learning topics</span>
+            <span class="query-type">🎮 Entertainment</span>
+            <span class="query-type">🏥 Health & wellness</span>
+            <span class="query-type">💼 Career guidance</span>
           </div>
         </div>
       </div>
@@ -607,6 +603,117 @@ export default {
 </script>
 
 <style scoped>
+/* Tolan Recommendation Banner */
+.tolan-recommendation {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 24px;
+  background: linear-gradient(135deg, rgba(163, 230, 53, 0.15), rgba(34, 211, 238, 0.1));
+  border: 1px solid rgba(163, 230, 53, 0.3);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.tolan-recommendation.exa-better {
+  background: linear-gradient(135deg, rgba(244, 114, 182, 0.15), rgba(244, 114, 182, 0.05));
+  border-color: rgba(244, 114, 182, 0.3);
+}
+
+.rec-icon {
+  font-size: 24px;
+}
+
+.rec-text {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.rec-text strong {
+  color: #a3e635;
+}
+
+.tolan-recommendation.exa-better .rec-text strong {
+  color: #f472b6;
+}
+
+/* Provider Badges */
+.provider-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  display: inline-block;
+}
+
+.provider-badge.new-badge {
+  background: rgba(163, 230, 53, 0.2);
+  color: #a3e635;
+}
+
+.provider-badge.current-badge {
+  background: rgba(244, 114, 182, 0.2);
+  color: #f472b6;
+}
+
+/* Summary adjustments */
+.summary-cards.three-cards {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.avg-scores.two-scores {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Reasoning Grid */
+.reasoning-grid.two-col {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Tolan Empty State */
+.empty-state.tolan-empty .empty-icon {
+  font-size: 56px;
+}
+
+.tolan-query-types {
+  margin-top: 32px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tolan-query-types h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.query-type-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.query-type {
+  padding: 8px 14px;
+  background: rgba(163, 230, 53, 0.1);
+  border: 1px solid rgba(163, 230, 53, 0.2);
+  border-radius: 20px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Tolan Button */
+.btn-new-suite.tolan-btn {
+  background: linear-gradient(135deg, #a3e635, #22d3ee);
+}
+
 .suite-header {
   margin-bottom: 28px;
 }
@@ -721,13 +828,14 @@ export default {
 }
 
 .btn-run {
-  background: linear-gradient(135deg, #a78bfa, #60a5fa);
-  color: white;
+  background: linear-gradient(135deg, #a3e635, #22d3ee);
+  color: #1a1a2e;
+  font-weight: 700;
 }
 
 .btn-run:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 20px rgba(167, 139, 250, 0.4);
+  box-shadow: 0 4px 20px rgba(163, 230, 53, 0.4);
 }
 
 .btn-generate:disabled,

@@ -3,26 +3,32 @@
     <!-- Hero Header -->
     <header>
       <div class="logo-section">
-        <div class="logo-icon">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="url(#grad1)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M2 17L12 22L22 17" stroke="url(#grad2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M2 12L12 17L22 12" stroke="url(#grad1)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <div class="logo-icon tolan-logo">
+          <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Cute alien face -->
+            <ellipse cx="24" cy="26" rx="18" ry="16" fill="url(#tolanGrad)"/>
+            <!-- Big eyes -->
+            <ellipse cx="17" cy="24" rx="5" ry="6" fill="#1a1a2e"/>
+            <ellipse cx="31" cy="24" rx="5" ry="6" fill="#1a1a2e"/>
+            <!-- Eye shine -->
+            <circle cx="18.5" cy="22" r="2" fill="white"/>
+            <circle cx="32.5" cy="22" r="2" fill="white"/>
+            <!-- Smile -->
+            <path d="M18 32 Q24 37 30 32" stroke="#1a1a2e" stroke-width="2" stroke-linecap="round" fill="none"/>
+            <!-- Antenna -->
+            <path d="M24 10 L24 14" stroke="url(#tolanGrad)" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="24" cy="8" r="3" fill="#fcd34d"/>
             <defs>
-              <linearGradient id="grad1" x1="2" y1="2" x2="22" y2="22">
-                <stop offset="0%" stop-color="#a78bfa"/>
-                <stop offset="100%" stop-color="#60a5fa"/>
-              </linearGradient>
-              <linearGradient id="grad2" x1="2" y1="17" x2="22" y2="22">
-                <stop offset="0%" stop-color="#f472b6"/>
-                <stop offset="100%" stop-color="#a78bfa"/>
+              <linearGradient id="tolanGrad" x1="6" y1="10" x2="42" y2="42">
+                <stop offset="0%" stop-color="#a3e635"/>
+                <stop offset="100%" stop-color="#22d3ee"/>
               </linearGradient>
             </defs>
           </svg>
         </div>
         <div class="logo-text">
-          <h1>Search API Showdown</h1>
-          <p class="tagline">Compare Parallel vs OpenAI vs Exa with AI-Powered Judging</p>
+          <h1>Tolan Search Infrastructure</h1>
+          <p class="tagline">Parallel vs Exa: Finding the Best Search for Your Alien Friend</p>
         </div>
       </div>
 
@@ -43,23 +49,23 @@
     </header>
 
     <!-- Info Banner -->
-    <div class="info-banner" v-if="$route.path === '/'">
+    <div class="info-banner tolan-banner" v-if="$route.path === '/'">
       <div class="info-content">
-        <h2>How It Works</h2>
+        <h2>Why This Matters for Tolan</h2>
         <div class="info-steps">
           <div class="step">
             <div class="step-num">1</div>
-            <div class="step-text">Enter a search query to compare</div>
+            <div class="step-text">Users ask Tolan real questions</div>
           </div>
           <div class="step-arrow">→</div>
           <div class="step">
             <div class="step-num">2</div>
-            <div class="step-text">All three APIs return their results</div>
+            <div class="step-text">Tolan needs accurate, fast web search</div>
           </div>
           <div class="step-arrow">→</div>
           <div class="step">
             <div class="step-num">3</div>
-            <div class="step-text">GPT-4o judges quality & relevance</div>
+            <div class="step-text">Better search = Better friend 🛸</div>
           </div>
         </div>
       </div>
@@ -70,7 +76,7 @@
     </main>
 
     <footer>
-      <p>Powered by <span class="api-badge parallel">Parallel API</span>, <span class="api-badge openai">OpenAI Web Search</span>, and <span class="api-badge exa">Exa API</span> with <span class="api-badge judge">GPT-4o Judge</span></p>
+      <p>Demo for <span class="api-badge tolan">Tolan</span> comparing <span class="api-badge parallel">Parallel API</span> vs <span class="api-badge exa">Exa API (Current)</span> with <span class="api-badge judge">GPT-4o Judge</span></p>
     </footer>
   </div>
 </template>
@@ -122,10 +128,15 @@ header {
 .logo-text h1 {
   font-size: 24px;
   font-weight: 800;
-  background: linear-gradient(135deg, #a78bfa 0%, #60a5fa 50%, #f472b6 100%);
+  background: linear-gradient(135deg, #a3e635 0%, #22d3ee 50%, #fcd34d 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.tolan-logo {
+  width: 56px;
+  height: 56px;
 }
 
 .tagline {
@@ -160,8 +171,8 @@ nav {
 }
 
 .nav-link.router-link-active {
-  background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(96, 165, 250, 0.2));
-  border: 1px solid rgba(167, 139, 250, 0.3);
+  background: linear-gradient(135deg, rgba(163, 230, 53, 0.2), rgba(34, 211, 238, 0.2));
+  border: 1px solid rgba(163, 230, 53, 0.3);
   color: #fff;
 }
 
@@ -176,6 +187,11 @@ nav {
   backdrop-filter: blur(20px);
   border: 1px solid rgba(167, 139, 250, 0.2);
   border-radius: 16px;
+}
+
+.info-banner.tolan-banner {
+  background: linear-gradient(135deg, rgba(163, 230, 53, 0.1), rgba(34, 211, 238, 0.05));
+  border: 1px solid rgba(163, 230, 53, 0.2);
 }
 
 .info-content h2 {
@@ -278,5 +294,11 @@ footer p {
   background: rgba(139, 92, 246, 0.2);
   color: #a78bfa;
   border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.api-badge.tolan {
+  background: linear-gradient(135deg, rgba(163, 230, 53, 0.2), rgba(34, 211, 238, 0.2));
+  color: #a3e635;
+  border: 1px solid rgba(163, 230, 53, 0.3);
 }
 </style>
