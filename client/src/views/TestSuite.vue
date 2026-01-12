@@ -1,15 +1,25 @@
 <template>
   <div class="test-suite">
-    <!-- Header -->
-    <div class="suite-header">
-      <div class="header-info">
-        <h2>Test Suite Runner</h2>
-        <p>Generate AI-powered test queries and compare all three APIs at scale</p>
-      </div>
+    <!-- Loading State for Shared Results -->
+    <div v-if="loadingShared" class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>Loading shared results...</p>
     </div>
 
-    <!-- Controls -->
-    <div class="controls-panel">
+    <template v-else>
+      <!-- Header -->
+      <div class="suite-header">
+        <div class="header-info">
+          <h2>{{ isSharedView ? 'Shared Test Results' : 'Test Suite Runner' }}</h2>
+          <p>{{ isSharedView ? 'View test suite comparison results' : 'Generate AI-powered test queries and compare all three APIs at scale' }}</p>
+        </div>
+        <router-link v-if="isSharedView" to="/suite" class="btn-new-suite">
+          <span>🚀</span> Run Your Own Suite
+        </router-link>
+      </div>
+
+      <!-- Controls (only show if not in shared view) -->
+      <div v-if="!isSharedView" class="controls-panel">
       <div class="generate-section">
         <div class="control-group topic-group">
           <label>Topic / Use Case (optional)</label>
@@ -49,41 +59,63 @@
           <span v-else class="btn-icon">🚀</span>
           {{ running ? `Running ${progress}/${queries.length}...` : 'Run All Queries' }}
         </button>
-      </div>
-    </div>
-
-    <!-- Error -->
-    <div v-if="error" class="error-banner">
-      <span>⚠️</span> {{ error }}
-    </div>
-
-    <!-- Queries List -->
-    <div v-if="queries.length > 0" class="queries-section">
-      <div class="section-header">
-        <h3>Test Queries</h3>
-        <span class="query-count">{{ queries.length }} queries</span>
-      </div>
-
-      <div class="queries-grid">
-        <div v-for="(q, i) in queries" :key="i" class="query-item">
-          <span class="query-num">{{ i + 1 }}</span>
-          <input v-model="queries[i]" :disabled="running" class="query-input" />
-          <button @click="removeQuery(i)" :disabled="running" class="btn-remove">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
         </div>
       </div>
 
-      <button @click="addQuery" :disabled="running" class="btn-add">
-        <span>+</span> Add Query
-      </button>
-    </div>
+      <!-- Error -->
+      <div v-if="error" class="error-banner">
+        <span>⚠️</span> {{ error }}
+      </div>
 
-    <!-- Results -->
-    <div v-if="results" class="results-section">
+      <!-- Queries List -->
+      <div v-if="queries.length > 0" class="queries-section">
+        <div class="section-header">
+          <h3>Test Queries</h3>
+          <span class="query-count">{{ queries.length }} queries</span>
+        </div>
+
+        <div class="queries-grid">
+          <div v-for="(q, i) in queries" :key="i" class="query-item" :class="{ readonly: isSharedView }">
+            <span class="query-num">{{ i + 1 }}</span>
+            <input v-model="queries[i]" :disabled="running || isSharedView" :readonly="isSharedView" class="query-input" />
+            <button v-if="!isSharedView" @click="removeQuery(i)" :disabled="running" class="btn-remove">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button v-if="!isSharedView" @click="addQuery" :disabled="running" class="btn-add">
+          <span>+</span> Add Query
+        </button>
+      </div>
+
+      <!-- Results -->
+      <div v-if="results" class="results-section">
+        <!-- Share Bar -->
+        <div class="share-bar">
+          <div class="share-info" v-if="isSharedView">
+            <span class="share-icon">🔗</span>
+            <span>Shared Results</span>
+            <span class="share-date" v-if="sharedData?.createdAt">{{ formatDate(sharedData.createdAt) }}</span>
+          </div>
+          <div class="share-actions">
+            <button v-if="!shareUrl && !isSharedView" @click="shareResults" :disabled="sharing" class="btn-share">
+              <span v-if="sharing" class="spinner small"></span>
+              <span v-else class="btn-icon">🔗</span>
+              {{ sharing ? 'Creating link...' : 'Share Results' }}
+            </button>
+            <div v-if="shareUrl" class="share-link-container">
+              <input type="text" :value="shareUrl" readonly class="share-link-input" ref="shareLinkInput" />
+              <button @click="copyShareLink" class="btn-copy" :class="{ copied }">
+                {{ copied ? '✓ Copied!' : 'Copy' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
       <!-- Summary Cards -->
       <div class="summary-panel">
         <h3>Results Summary</h3>
@@ -247,31 +279,38 @@
       </div>
     </div>
 
-    <!-- Empty State -->
-    <div v-else-if="queries.length === 0" class="empty-state">
-      <div class="empty-icon">📊</div>
-      <h3>No Test Suite Yet</h3>
-      <p>Generate a test suite to compare API performance across multiple queries.</p>
-      <div class="empty-features">
-        <div class="feature">
-          <span class="feature-icon">🎲</span>
-          <span>AI-generated diverse queries</span>
-        </div>
-        <div class="feature">
-          <span class="feature-icon">⚖️</span>
-          <span>Side-by-side comparison</span>
-        </div>
-        <div class="feature">
-          <span class="feature-icon">📈</span>
-          <span>Aggregate statistics</span>
+      <!-- Empty State (only show if not in shared view) -->
+      <div v-else-if="queries.length === 0 && !isSharedView" class="empty-state">
+        <div class="empty-icon">📊</div>
+        <h3>No Test Suite Yet</h3>
+        <p>Generate a test suite to compare API performance across multiple queries.</p>
+        <div class="empty-features">
+          <div class="feature">
+            <span class="feature-icon">🎲</span>
+            <span>AI-generated diverse queries</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon">⚖️</span>
+            <span>Side-by-side comparison</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon">📈</span>
+            <span>Aggregate statistics</span>
+          </div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
 <script>
 export default {
+  props: {
+    id: {
+      type: String,
+      default: null
+    }
+  },
   data() {
     return {
       queryCount: 10,
@@ -284,10 +323,39 @@ export default {
       currentQuery: '',
       liveResults: [],
       error: null,
-      expandedRow: null
+      expandedRow: null,
+      // Share functionality
+      sharing: false,
+      shareUrl: null,
+      copied: false,
+      sharedData: null,
+      loadingShared: false
+    }
+  },
+  async mounted() {
+    if (this.id) {
+      await this.loadSharedResults()
+    }
+  },
+  watch: {
+    id: {
+      immediate: false,
+      async handler(newId) {
+        if (newId) {
+          await this.loadSharedResults()
+        } else {
+          this.sharedData = null
+          this.results = null
+          this.queries = []
+          this.shareUrl = null
+        }
+      }
     }
   },
   computed: {
+    isSharedView() {
+      return !!this.id
+    },
     parallelWinPercent() {
       if (!this.results) return 0
       return (this.results.summary.parallelWins / this.results.summary.total) * 100
@@ -449,6 +517,90 @@ export default {
     },
     getTotal(scores) {
       return scores.total || 0
+    },
+    async loadSharedResults() {
+      if (!this.id) return
+
+      this.loadingShared = true
+      this.error = null
+
+      try {
+        const res = await fetch(`/api/suite/results/${this.id}`)
+        
+        if (!res.ok) {
+          if (res.status === 404) {
+            throw new Error('Shared results not found. The link may have expired or be invalid.')
+          }
+          throw new Error('Failed to load shared results')
+        }
+
+        const data = await res.json()
+        this.sharedData = data
+        this.results = { results: data.results, summary: data.summary }
+        this.queries = data.queries || []
+        this.topic = data.topic || ''
+      } catch (err) {
+        this.error = err.message
+      } finally {
+        this.loadingShared = false
+      }
+    },
+    async shareResults() {
+      if (!this.results) return
+
+      this.sharing = true
+      this.error = null
+
+      try {
+        const res = await fetch('/api/suite/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            results: this.results.results,
+            summary: this.results.summary,
+            queries: this.queries,
+            topic: this.topic || null
+          })
+        })
+
+        if (!res.ok) throw new Error('Failed to save results')
+
+        const data = await res.json()
+        this.shareUrl = window.location.origin + data.url
+      } catch (err) {
+        this.error = err.message
+      } finally {
+        this.sharing = false
+      }
+    },
+    async copyShareLink() {
+      if (!this.shareUrl) return
+
+      try {
+        await navigator.clipboard.writeText(this.shareUrl)
+        this.copied = true
+        setTimeout(() => {
+          this.copied = false
+        }, 2000)
+      } catch (err) {
+        // Fallback for older browsers
+        this.$refs.shareLinkInput.select()
+        document.execCommand('copy')
+        this.copied = true
+        setTimeout(() => {
+          this.copied = false
+        }, 2000)
+      }
+    },
+    formatDate(dateString) {
+      const date = new Date(dateString)
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
     }
   }
 }
@@ -1133,5 +1285,184 @@ export default {
   color: rgba(255, 255, 255, 0.7);
   line-height: 1.5;
   margin: 0;
+}
+
+/* Share Bar */
+.share-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.05));
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.share-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.share-icon {
+  font-size: 18px;
+}
+
+.share-date {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.share-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-share {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(139, 92, 246, 0.1));
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 8px;
+  color: #a78bfa;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-share:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.4), rgba(139, 92, 246, 0.2));
+  transform: translateY(-1px);
+}
+
+.btn-share:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.share-link-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.share-link-input {
+  width: 280px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.8);
+  outline: none;
+}
+
+.share-link-input:focus {
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+.btn-copy {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #a78bfa, #60a5fa);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
+}
+
+.btn-copy:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.btn-copy.copied {
+  background: linear-gradient(135deg, #34d399, #10b981);
+}
+
+.spinner.small {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(167, 139, 250, 0.2);
+  border-top-color: #a78bfa;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+.loading-state p {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* New Suite Button */
+.btn-new-suite {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #a78bfa, #60a5fa);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-new-suite:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(167, 139, 250, 0.4);
+}
+
+/* Shared view header styling */
+.suite-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Readonly query items */
+.query-item.readonly {
+  background: rgba(255, 255, 255, 0.01);
+  border-color: rgba(255, 255, 255, 0.04);
+}
+
+.query-item.readonly .query-input {
+  cursor: default;
+  color: rgba(255, 255, 255, 0.7);
 }
 </style>

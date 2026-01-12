@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 
 const { searchParallel } = require('./services/parallel');
 const { searchExa } = require('./services/exa');
@@ -10,6 +12,12 @@ const { judgeResults, generateTestSuite } = require('./services/openai');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Storage directory for shared results
+const RESULTS_DIR = path.join(__dirname, 'results');
+if (!fs.existsSync(RESULTS_DIR)) {
+  fs.mkdirSync(RESULTS_DIR, { recursive: true });
+}
 
 app.use(cors());
 app.use(express.json());
@@ -168,6 +176,59 @@ app.post('/api/suite/run', async (req, res) => {
     console.error('Suite run error:', err);
     res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
     res.end();
+  }
+});
+
+// Save test suite results for sharing
+app.post('/api/suite/save', async (req, res) => {
+  try {
+    const { results, summary, queries, topic } = req.body;
+
+    if (!results || !summary) {
+      return res.status(400).json({ error: 'Results and summary are required' });
+    }
+
+    // Generate a unique ID (8 chars for readability)
+    const id = crypto.randomBytes(4).toString('hex');
+    
+    const data = {
+      id,
+      createdAt: new Date().toISOString(),
+      topic: topic || null,
+      queries,
+      results,
+      summary
+    };
+
+    // Save to file
+    const filePath = path.join(RESULTS_DIR, `${id}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+
+    res.json({ id, url: `/suite/${id}` });
+  } catch (err) {
+    console.error('Save results error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get shared test suite results
+app.get('/api/suite/results/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Sanitize ID to prevent path traversal
+    const sanitizedId = id.replace(/[^a-zA-Z0-9]/g, '');
+    const filePath = path.join(RESULTS_DIR, `${sanitizedId}.json`);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Results not found' });
+    }
+
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    res.json(data);
+  } catch (err) {
+    console.error('Get results error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
